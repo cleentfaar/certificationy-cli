@@ -97,11 +97,16 @@ class TestCommand extends AbstractCommand
      * @param InputInterface $input
      *
      * @return Exam
+     *
+     * @throws \InvalidArgumentException
      */
     protected function createExam(InputInterface $input)
     {
         $categories   = $input->getArgument('category');
         $questionSets = $this->loadQuestionSets($categories, $input);
+        if (empty($questionSets)) {
+            throw new \InvalidArgumentException('No questions found in any of the given categories');
+        }
         $student      = new Student($input->getOption('student-name'));
         $exam         = new Exam($student, $questionSets);
 

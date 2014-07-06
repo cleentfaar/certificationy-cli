@@ -12,6 +12,7 @@
 namespace Certificationy\Command;
 
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -30,6 +31,7 @@ class ListCommand extends AbstractCommand
     {
         $this->setName('list');
         $this->setDescription('Lists all available categories');
+        $this->addOption('questions-dir', 'd', InputOption::VALUE_OPTIONAL, 'Directory containing the YAML-files', __DIR__ . '/../Resources/questions');
     }
 
     /**

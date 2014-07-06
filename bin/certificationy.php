@@ -10,9 +10,12 @@
  * file that was distributed with this source code.
  */
 
-require __DIR__.'/../vendor/autoload.php';
+require __DIR__ . '/../vendor/autoload.php';
 
-use Certificationy\Application\Certificationy as Application;
+use Symfony\Component\Console\Application;
 
-$application = new Application();
-$application->run();
+$app = new Application();
+$app->add(new \Certificationy\Command\TestCommand());
+$app->add(new \Certificationy\Command\ListCommand());
+$app->setDefaultCommand('test');
+$app->run();
