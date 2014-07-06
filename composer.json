@@ -17,6 +17,7 @@
     ],
     "require": {
         "php": ">=5.3.3",
+        "symfony/console": ">=2.5",
         "certy/certy": "1.0.x-dev",
         "certy/certy-loader": "1.0.x-dev"
     },

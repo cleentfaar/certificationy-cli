@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<phpunit colors="true" bootstrap="Tests/bootstrap.php">
+<phpunit colors="true" bootstrap="./vendor/autoload.php">
     <testsuites>
         <testsuite name="Certificationy Tests">
             <directory suffix="Test.php">./src/Certificationy/Tests</directory>
