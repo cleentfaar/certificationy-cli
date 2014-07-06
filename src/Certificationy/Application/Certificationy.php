@@ -9,9 +9,9 @@
  * file that was distributed with this source code.
  */
 
-namespace Certificationy\Cli\Application;
+namespace Certificationy\Application;
 
-use Certificationy\Cli\Command\StartCommand;
+use Certificationy\Command\StartCommand;
 
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputArgument;

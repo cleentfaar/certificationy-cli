@@ -12,7 +12,7 @@
 
 require __DIR__.'/vendor/autoload.php';
 
-use Certificationy\Cli\Application\Certificationy as Application;
+use Certificationy\Application\Certificationy as Application;
 
 $application = new Application();
 $application->run();

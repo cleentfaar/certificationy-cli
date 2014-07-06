@@ -3,7 +3,7 @@
 <phpunit colors="true" bootstrap="Tests/bootstrap.php">
     <testsuites>
         <testsuite name="Certificationy Tests">
-            <directory suffix="Test.php">./Tests</directory>
+            <directory suffix="Test.php">./src/Certificationy/Tests</directory>
         </testsuite>
     </testsuites>
 
@@ -11,8 +11,10 @@
         <whitelist>
             <directory>./</directory>
             <exclude>
-                <directory>./Tests</directory>
                 <directory>./vendor</directory>
+                <directory>./bin</directory>
+                <directory>./src/Certificationy/Tests</directory>
+                <directory>./src/Certificationy/Resources</directory>
             </exclude>
         </whitelist>
     </filter>

@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace Certificationy\Cli\Command;
+namespace Certificationy\Command;
 
 use Certificationy\Certification\Loader;
 use Certificationy\Certification\Set;

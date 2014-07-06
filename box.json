@@ -7,7 +7,7 @@
     }
     ],
     "files": ["composer.json", "LICENSE"],
-    "main": "certificationy.php",
+    "main": "bin/certificationy.php",
     "output": "certificationy.phar",
     "stub": true,
     "chmod": "0755"
