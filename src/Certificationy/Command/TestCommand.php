@@ -42,6 +42,11 @@ class TestCommand extends AbstractCommand
      */
     const WORDWRAP_NUMBER = 80;
 
+    /**
+     * @var array
+     *
+     * @todo Implement dumper component once it's stable to create a certificate from these taglines
+     */
     protected $rewards = array(
         0  => 'You... SUCK!',
         1  => 'Come on now, even my grandma can do better!',

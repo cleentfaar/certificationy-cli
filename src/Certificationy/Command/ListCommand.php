@@ -32,6 +32,15 @@ class ListCommand extends AbstractCommand
         $this->setName('list');
         $this->setDescription('Lists all available categories');
         $this->addOption('questions-dir', 'd', InputOption::VALUE_OPTIONAL, 'Directory containing the YAML-files', __DIR__ . '/../Resources/questions');
+        $this->setHelp(<<<EOT
+The list command allows you to get an overview of all the available exam categories.
+
+You can limit the categories used in your own tests by using one or more of these categories
+in the --category[] option of the test command. For example:
+
+<info>certificationy.phar test --category[]=cat1 --category[]=cat2</info>
+EOT
+        );
     }
 
     /**
@@ -44,12 +53,11 @@ class ListCommand extends AbstractCommand
         $results = array();
         foreach ($questionSets as $questionSet) {
             $results[] = array($questionSet->getCategory(), $questionSet->getDescription());
-            $output->write('- ' . $questionSet->getCategory());
         }
 
         $tableHelper = $this->getHelper('table');
         $tableHelper
-            ->setHeaders(array('Category', 'Description', 'Result'))
+            ->setHeaders(array('Category', 'Description'))
             ->setRows($results);
 
         $tableHelper->render($output);
