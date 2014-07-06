@@ -15,8 +15,6 @@ use Certy\Actor\Examiner;
 use Certy\Actor\Student;
 use Certy\Certification\Exam;
 use Certy\Certification\Question\Loader\DelegatingLoader;
-use Certy\Certification\Question\Loader\PhpLoader;
-use Certy\Certification\Question\Loader\YamlLoader;
 use Certy\Certification\Question\QuestionFactory;
 use Certy\Certification\Question\QuestionInterface;
 use Certy\Reward\SimpleReward;
@@ -78,14 +76,11 @@ class TestCommand extends Command
         }
 
         $pathToExam       = $input->getArgument('exam');
-        $delegatingLoader = new DelegatingLoader();
-        $questionFactory  = new QuestionFactory();
+        $delegatingLoader = new DelegatingLoader(new QuestionFactory());
         $student          = new Student($input->getOption('student-name'));
         $reward           = new SimpleReward($this->rewards);
-        $delegatingLoader->addLoader(new YamlLoader($questionFactory));
-        $delegatingLoader->addLoader(new PhpLoader($questionFactory));
-        $questionSet = $delegatingLoader->load($pathToExam);
-        $exam        = new Exam($student, $questionSet);
+        $questionSet      = $delegatingLoader->load($pathToExam);
+        $exam             = new Exam($student, $questionSet);
         $exam->start();
         while ($question = $exam->run()) {
             $this->askQuestion($question, $input, $output);
