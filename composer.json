@@ -23,7 +23,7 @@
         "phpunit/phpunit": "~4.1"
     },
     "autoload": {
-        "psr-4": { "Certificationy\\": "src/" }
+        "psr-4": { "": "src/" }
     },
     "extra": {
         "branch-alias": {
