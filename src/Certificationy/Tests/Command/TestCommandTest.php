@@ -38,33 +38,42 @@ class TestCommandTest extends \PHPUnit_Framework_TestCase
     {
         $this->markTestIncomplete('Not yet ready, need to make separate list command for this');
         /**
-        $commandTester = new CommandTester($this->command);
-        $commandTester->execute(array(
-            'command' => $this->command->getName(),
-            '-l' => true
-        ));
-
-        $output = $commandTester->getDisplay();
-        $this->assertRegExp('/Twig/', $output);
-        $this->assertCount(count(Loader::getCategories()) + 1, explode("\n", $output));
-        */
+         * $commandTester = new CommandTester($this->command);
+         * $commandTester->execute(array(
+         * 'command' => $this->command->getName(),
+         * '-l' => true
+         * ));
+         *
+         * $output = $commandTester->getDisplay();
+         * $this->assertRegExp('/Twig/', $output);
+         * $this->assertCount(count(Loader::getCategories()) + 1, explode("\n", $output));
+         */
     }
 
+    /**
+     * Tests whether a question is returned after starting the command
+     */
     public function testCanGetQuestions()
     {
         $helper = $this->command->getHelper('question');
-        $helper->setInputStream($this->getInputStream(str_repeat("0\n", 20)));
+        $helper->setInputStream($this->getInputStream(str_repeat("1\n", 4)));
 
         $commandTester = new CommandTester($this->command);
         $commandTester->execute(array(
-            'command' => $this->command->getName(),
+            'command'         => $this->command->getName(),
+            '--questions-dir' => __DIR__ . '/questions',
         ));
 
         $output = $commandTester->getDisplay();
-        $this->assertRegExp('/Twig/', $output);
-        $this->assertRegExp('/Starting a new set of 20 questions/', $commandTester->getDisplay());
+        $this->assertRegExp('/Foobar/', $output);
+        $this->assertRegExp('/Who am I/', $output);
     }
 
+    /**
+     * @param $input
+     *
+     * @return resource
+     */
     protected function getInputStream($input)
     {
         $stream = fopen('php://memory', 'r+', false);

@@ -19,7 +19,6 @@ use Certy\Component\Core\Exam\Question\QuestionInterface;
 use Certy\Component\Core\Exam\Question\QuestionSet;
 use Certy\Component\Core\Reward\SimpleReward;
 use Certy\Component\Loader\YamlLoader;
-use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -36,7 +35,7 @@ use Symfony\Component\Finder\SplFileInfo;
  *
  * @author Vincent Composieux <vincent.composieux@gmail.com>
  */
-class TestCommand extends Command
+class TestCommand extends AbstractCommand
 {
     /**
      * @var integer
@@ -65,6 +64,7 @@ class TestCommand extends Command
         $this->setName('test');
         $this->setDescription('Starts a new certificationy exam');
         $this->addArgument('category', InputArgument::IS_ARRAY, 'Categories to include in the exam, leave empty to include all categories');
+        $this->addOption('questions-dir', 'd', InputOption::VALUE_OPTIONAL, 'Directory containing the YAML-files', __DIR__ . '/../Resources/questions');
         $this->addOption('student-name', 's', InputOption::VALUE_OPTIONAL, 'Name of the student that will perform the exam', 'Unknown student');
         $this->addOption('randomized', 'r', InputOption::VALUE_REQUIRED, 'Whether questions and answers should be randomized to avoid students remembering them in earlier attempts', true);
         $this->addOption('show-multiple-choice', null, InputOption::VALUE_OPTIONAL, 'Use this option to show indicators when a question is multiple-choice', true);
@@ -79,11 +79,13 @@ class TestCommand extends Command
             throw new \RuntimeException('This command must be run interactively');
         }
 
+        $i    = 0;
         $exam = $this->createExam($input);
         $exam->start();
         while ($questionSet = $exam->run()) {
+            $output->writeln(sprintf('<info>Category:</info> <comment>%s</comment>', $questionSet->getCategory()));
             foreach ($questionSet->all() as $question) {
-                $this->askQuestion($question, $input, $output);
+                $this->askQuestion(++$i, $question, $input, $output);
             }
         }
         $this->displayResults($exam, $output);
@@ -99,7 +101,7 @@ class TestCommand extends Command
     protected function createExam(InputInterface $input)
     {
         $categories   = $input->getArgument('category');
-        $questionSets = $this->getQuestionSets($categories, $input);
+        $questionSets = $this->loadQuestionSets($categories, $input);
         $student      = new Student($input->getOption('student-name'));
         $exam         = new Exam($student, $questionSets);
 
@@ -107,48 +109,27 @@ class TestCommand extends Command
     }
 
     /**
-     * @param array          $categories
-     * @param InputInterface $input
-     *
-     * @return QuestionSet[]
-     */
-    protected function getQuestionSets(array $categories = array(), InputInterface $input)
-    {
-        $loader       = new YamlLoader(new QuestionFactory());
-        $questionsDir = __DIR__ . '/../Resources/questions';
-        $finder       = new Finder();
-        $yamlFiles    = $finder->files()->in($questionsDir)->name('*.yml');
-        $questionSets = array();
-        foreach ($yamlFiles->getIterator() as $file) {
-            /** @var SplFileInfo $file */
-            $questionSet = $loader->load($file->getRealPath(), $input->getOption('randomized'));
-            if (empty($categories) || in_array($questionSet->getCategory(), $categories)) {
-                $questionSets[] = $questionSet;
-            }
-        }
-
-        return $questionSets;
-    }
-
-    /**
      * Asks the user the given question
      *
-     * @param QuestionInterface $question The quetion to ask the user
-     * @param InputInterface    $input    A Symfony Console input instance
-     * @param OutputInterface   $output   A Symfony Console output instance
+     * @param int               $iteration The position of this question in the exam
+     * @param QuestionInterface $question  The quetion to ask the user
+     * @param InputInterface    $input     A Symfony Console input instance
+     * @param OutputInterface   $output    A Symfony Console output instance
      */
-    protected function askQuestion(QuestionInterface $question, InputInterface $input, OutputInterface $output)
+    protected function askQuestion($iteration, QuestionInterface $question, InputInterface $input, OutputInterface $output)
     {
         /** @var QuestionHelper $questionHelper */
         $questionHelper     = $this->getHelper('question');
         $showMultipleChoice = $input->getOption('show-multiple-choice');
+        $answers            = $question->getAnswerSet()->getPossibleAnswers();
         $choiceQuestion     = new ChoiceQuestion(
             sprintf(
-                'Question <comment>#%d</comment> [<info>%s</info>] %s' .
+                'Question <comment>#%d</comment> %s' .
                 ($showMultipleChoice === true ? "\n" . 'This question <comment>' . ($question->isMultipleChoice() === true ? 'IS' : 'IS NOT') . "</comment> multiple choice." : ""),
+                $iteration,
                 $question->getQuestion()
             ),
-            $question->getAnswerSet()->getPossibleAnswers()
+            array_combine(range(1, count($answers)), $answers)
         );
 
         $multiSelect = $showMultipleChoice === true ? $question->isMultipleChoice() : true;
@@ -173,9 +154,10 @@ class TestCommand extends Command
     protected function displayResults(Exam $exam, OutputInterface $output)
     {
         $examiner      = new Examiner();
-        $reward        = new SimpleReward($this->rewards);
+        $reward        = new SimpleReward();
         $results       = array();
         $questionCount = 1;
+        $reward->setRewards($this->rewards);
 
         foreach ($exam->getQuestionSets() as $key => $questionSet) {
             foreach ($questionSet->all() as $question) {
@@ -198,9 +180,34 @@ class TestCommand extends Command
 
             $tableHelper->render($output);
         }
+        $points = $examiner->evaluate($exam);
         $output->writeln('<comment>Total score:</comment>');
         $output->writeln(
-            sprintf('<info>Points: %d</info> - <comment>Reward: %s</comment>', $examiner->evaluate($exam), $reward->reward($points))
+            sprintf('<info>Points: %d</info> - <comment>Reward: %s</comment>', $points, $reward->reward($points))
         );
+    }
+
+    /**
+     * @param array          $categories
+     * @param InputInterface $input
+     *
+     * @return QuestionSet[]
+     */
+    protected function loadQuestionSets(array $categories = array(), InputInterface $input)
+    {
+        $loader       = new YamlLoader(new QuestionFactory());
+        $questionsDir = $input->getOption('questions-dir');
+        $finder       = new Finder();
+        $yamlFiles    = $finder->files()->in($questionsDir)->name('*.yml');
+        $questionSets = array();
+        foreach ($yamlFiles->getIterator() as $file) {
+            /** @var SplFileInfo $file */
+            $questionSet = $loader->load($file->getRealPath(), $input->getOption('randomized'));
+            if (empty($categories) || in_array($questionSet->getCategory(), $categories)) {
+                $questionSets[] = $questionSet;
+            }
+        }
+
+        return $questionSets;
     }
 }
