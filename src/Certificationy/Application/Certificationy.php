@@ -11,8 +11,6 @@
 
 namespace Certificationy\Application;
 
-use Certificationy\Command\StartCommand;
-
 use Certificationy\Command\TestCommand;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputArgument;

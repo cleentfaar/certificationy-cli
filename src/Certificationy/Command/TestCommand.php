@@ -82,8 +82,10 @@ class TestCommand extends Command
         $questionSet      = $delegatingLoader->load($pathToExam);
         $exam             = new Exam($student, $questionSet);
         $exam->start();
-        while ($question = $exam->run()) {
-            $this->askQuestion($question, $input, $output);
+        while ($questionSet = $exam->run()) {
+            foreach ($questionSet->all() as $question) {
+                $this->askQuestion($question, $input, $output);
+            }
         }
         $examiner = new Examiner();
         $points   = $examiner->evaluate($exam);
