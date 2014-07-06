@@ -17,6 +17,8 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Finder\Finder;
+use Symfony\Component\Finder\SplFileInfo;
 
 /**
  * Class Certificationy
@@ -38,7 +40,7 @@ class Certificationy extends Application
      */
     protected function getDefaultCommands()
     {
-        $defaultCommands = parent::getDefaultCommands();
+        $defaultCommands   = parent::getDefaultCommands();
         $defaultCommands[] = new TestCommand();
 
         return $defaultCommands;
@@ -54,7 +56,7 @@ class Certificationy extends Application
 
         return $inputDefinition;
     }
-    
+
     /**
      * Gets the default input definition.
      *
@@ -65,9 +67,9 @@ class Certificationy extends Application
         return new InputDefinition(array(
             new InputArgument('command', InputArgument::REQUIRED, 'The command to execute'),
 
-            new InputOption('--help',    '-h', InputOption::VALUE_NONE, 'Display this help message.'),
+            new InputOption('--help', '-h', InputOption::VALUE_NONE, 'Display this help message.'),
             new InputOption('--version', '-V', InputOption::VALUE_NONE, 'Display this application version.'),
-            new InputOption('--ansi',    null, InputOption::VALUE_NONE, 'Force ANSI output.'),
+            new InputOption('--ansi', null, InputOption::VALUE_NONE, 'Force ANSI output.'),
             new InputOption('--no-ansi', null, InputOption::VALUE_NONE, 'Disable ANSI output.'),
         ));
     }

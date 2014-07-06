@@ -11,13 +11,14 @@
 
 namespace Certificationy\Command;
 
-use Certy\Actor\Examiner;
-use Certy\Actor\Student;
-use Certy\Certification\Exam;
-use Certy\Certification\Question\Loader\DelegatingLoader;
-use Certy\Certification\Question\QuestionFactory;
-use Certy\Certification\Question\QuestionInterface;
-use Certy\Reward\SimpleReward;
+use Certy\Component\Core\Actor\Examiner;
+use Certy\Component\Core\Actor\Student;
+use Certy\Component\Core\Exam\Exam;
+use Certy\Component\Core\Exam\Question\QuestionFactory;
+use Certy\Component\Core\Exam\Question\QuestionInterface;
+use Certy\Component\Core\Exam\Question\QuestionSet;
+use Certy\Component\Core\Reward\SimpleReward;
+use Certy\Component\Loader\YamlLoader;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputArgument;
@@ -25,9 +26,11 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ChoiceQuestion;
+use Symfony\Component\Finder\Finder;
+use Symfony\Component\Finder\SplFileInfo;
 
 /**
- * Class StartCommand
+ * Class TestCommand
  *
  * This is the command to start a new questions set
  *
@@ -61,8 +64,9 @@ class TestCommand extends Command
     {
         $this->setName('test');
         $this->setDescription('Starts a new certificationy exam');
-        $this->addArgument('exam', InputArgument::OPTIONAL, 'Path to the exam you want to use', __DIR__ . '/../Resources/exams/certificationy.yml');
+        $this->addArgument('category', InputArgument::IS_ARRAY, 'Categories to include in the exam, leave empty to include all categories');
         $this->addOption('student-name', 's', InputOption::VALUE_OPTIONAL, 'Name of the student that will perform the exam', 'Unknown student');
+        $this->addOption('randomized', 'r', InputOption::VALUE_REQUIRED, 'Whether questions and answers should be randomized to avoid students remembering them in earlier attempts', true);
         $this->addOption('show-multiple-choice', null, InputOption::VALUE_OPTIONAL, 'Use this option to show indicators when a question is multiple-choice', true);
     }
 
@@ -75,22 +79,55 @@ class TestCommand extends Command
             throw new \RuntimeException('This command must be run interactively');
         }
 
-        $pathToExam       = $input->getArgument('exam');
-        $delegatingLoader = new DelegatingLoader(new QuestionFactory());
-        $student          = new Student($input->getOption('student-name'));
-        $reward           = new SimpleReward($this->rewards);
-        $questionSet      = $delegatingLoader->load($pathToExam);
-        $exam             = new Exam($student, $questionSet);
+        $exam = $this->createExam($input);
         $exam->start();
         while ($questionSet = $exam->run()) {
             foreach ($questionSet->all() as $question) {
                 $this->askQuestion($question, $input, $output);
             }
         }
-        $examiner = new Examiner();
-        $points   = $examiner->evaluate($exam);
-        $prize    = $reward->reward($points);
-        $this->displayResults($exam, $points, $prize, $output);
+        $this->displayResults($exam, $output);
+
+        return;
+    }
+
+    /**
+     * @param InputInterface $input
+     *
+     * @return Exam
+     */
+    protected function createExam(InputInterface $input)
+    {
+        $categories   = $input->getArgument('category');
+        $questionSets = $this->getQuestionSets($categories, $input);
+        $student      = new Student($input->getOption('student-name'));
+        $exam         = new Exam($student, $questionSets);
+
+        return $exam;
+    }
+
+    /**
+     * @param array          $categories
+     * @param InputInterface $input
+     *
+     * @return QuestionSet[]
+     */
+    protected function getQuestionSets(array $categories = array(), InputInterface $input)
+    {
+        $loader       = new YamlLoader(new QuestionFactory());
+        $questionsDir = __DIR__ . '/../Resources/questions';
+        $finder       = new Finder();
+        $yamlFiles    = $finder->files()->in($questionsDir)->name('*.yml');
+        $questionSets = array();
+        foreach ($yamlFiles->getIterator() as $file) {
+            /** @var SplFileInfo $file */
+            $questionSet = $loader->load($file->getRealPath(), $input->getOption('randomized'));
+            if (empty($categories) || in_array($questionSet->getCategory(), $categories)) {
+                $questionSets[] = $questionSet;
+            }
+        }
+
+        return $questionSets;
     }
 
     /**
@@ -131,25 +168,26 @@ class TestCommand extends Command
      * Displays results through the output
      *
      * @param Exam            $exam   The exam that was evaluated
-     * @param int             $points The points that have been awarded, as a number between 0 and 100
-     * @param string          $reward The reward for this score (a cool text :-P)
      * @param OutputInterface $output A Symfony Console output instance
      */
-    protected function displayResults(Exam $exam, $points, $reward, OutputInterface $output)
+    protected function displayResults(Exam $exam, OutputInterface $output)
     {
-        $results = array();
-
+        $examiner      = new Examiner();
+        $reward        = new SimpleReward($this->rewards);
+        $results       = array();
         $questionCount = 1;
 
-        foreach ($exam->getQuestions() as $key => $question) {
-            $isCorrect = $question->isCorrect($key);
-            $label     = wordwrap($question->getQuestion(), self::WORDWRAP_NUMBER, "\n");
+        foreach ($exam->getQuestionSets() as $key => $questionSet) {
+            foreach ($questionSet->all() as $question) {
+                $isCorrect = $question->isCorrect($key);
+                $label     = wordwrap($question->getQuestion(), self::WORDWRAP_NUMBER, "\n");
 
-            $results[] = array(
-                sprintf('<comment>#%d</comment> %s', $questionCount++, $label),
-                wordwrap(implode(', ', $question->getAnswerSet()->getCorrectAnswers()), self::WORDWRAP_NUMBER, "\n"),
-                $isCorrect ? '<info>✔</info>' : '<error>✗</error>'
-            );
+                $results[] = array(
+                    sprintf('<comment>#%d</comment> %s', $questionCount++, $label),
+                    wordwrap(implode(', ', $question->getAnswerSet()->getCorrectAnswers()), self::WORDWRAP_NUMBER, "\n"),
+                    $isCorrect ? '<info>✔</info>' : '<error>✗</error>'
+                );
+            }
         }
 
         if ($results) {
@@ -162,7 +200,7 @@ class TestCommand extends Command
         }
         $output->writeln('<comment>Total score:</comment>');
         $output->writeln(
-            sprintf('<info>Points: %d</info> - <comment>Reward: %s</comment>', $points, $reward)
+            sprintf('<info>Points: %d</info> - <comment>Reward: %s</comment>', $examiner->evaluate($exam), $reward->reward($points))
         );
     }
 }
